@@ -24,13 +24,32 @@ const canvas = document.querySelector('canvas.webgl')
 const scene = new THREE.Scene()
 
 /**
- * Test cube
+ * Lights
  */
-const cube = new THREE.Mesh(
-    new THREE.BoxGeometry(1, 1, 1),
-    new THREE.MeshBasicMaterial({ color: '#ff0000' })
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.5)
+scene.add(ambientLight)
+
+const hemisphereLight = new THREE.HemisphereLight(0xff0000, 0x0000ff, 0.3)
+scene.add(hemisphereLight)
+
+
+//helper
+const hemisphereLightHelper = new THREE.HemisphereLightHelper(hemisphereLight, 0.2)
+scene.add(hemisphereLightHelper)
+
+
+/**
+ * Objects
+ */
+// Material
+const material = new THREE.MeshStandardMaterial()
+material.roughness = 0.4
+
+const mesh1 = new THREE.Mesh(
+    new THREE.TorusKnotGeometry( 10, 3, 100, 16 ),
+    material
 )
-scene.add(cube)
+scene.add(mesh1)
 
 /**
  * Sizes
@@ -59,8 +78,8 @@ window.addEventListener('resize', () =>
  * Camera
  */
 // Base camera
-const camera = new THREE.PerspectiveCamera(35, sizes.width / sizes.height, 0.1, 100)
-camera.position.z = 6
+const camera = new THREE.PerspectiveCamera( 45, sizes.width / sizes.height, 1, 1000 );
+camera.position.z = 100
 scene.add(camera)
 
 /**
@@ -76,13 +95,20 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
  * Animate
  */
 const clock = new THREE.Clock()
+let previousTime = 0
 
 const tick = () =>
 {
     const elapsedTime = clock.getElapsedTime()
+    const deltaTime = elapsedTime - previousTime
+    previousTime = elapsedTime
 
     // Render
     renderer.render(scene, camera)
+
+    mesh1.rotation.y += deltaTime* 0.7;
+    mesh1.rotation.x += deltaTime* 0.2;
+    mesh1.rotation.z += deltaTime* 1;
 
     // Call tick again on the next frame
     window.requestAnimationFrame(tick)
