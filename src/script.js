@@ -24,6 +24,13 @@ const canvas = document.querySelector('canvas.webgl')
 const scene = new THREE.Scene()
 
 /**
+ * Textures
+ */
+const textureLoader = new THREE.TextureLoader()
+const particleTexture = textureLoader.load('/textures/1.png')
+
+
+/**
  * Lights
  */
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.5)
@@ -35,7 +42,7 @@ scene.add(hemisphereLight)
 
 //helper
 const hemisphereLightHelper = new THREE.HemisphereLightHelper(hemisphereLight, 0.2)
-scene.add(hemisphereLightHelper)
+// scene.add(hemisphereLightHelper)
 
 
 /**
@@ -49,7 +56,55 @@ const mesh1 = new THREE.Mesh(
     new THREE.TorusKnotGeometry( 10, 3, 100, 16 ),
     material
 )
-scene.add(mesh1)
+const mesh2 = new THREE.Mesh(
+    new THREE.BoxGeometry(10, 10, 10),
+    material
+)
+
+
+//Particles
+const particlesGeometry = new THREE.BufferGeometry()
+const count = 5000
+
+const positions = new Float32Array(count * 3)
+const colors = new Float32Array(count * 3)
+
+for(let i = 0; i < count * 3; i++)
+{
+    positions[i] = (Math.random() - 0.5) * 100
+    colors[i] = Math.random()
+}
+
+particlesGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+particlesGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+
+const particlesMaterial = new THREE.PointsMaterial()
+
+particlesMaterial.size = 1
+particlesMaterial.sizeAttenuation = true
+
+particlesMaterial.color = new THREE.Color('#ff88cc')
+
+particlesMaterial.transparent = true
+particlesMaterial.alphaMap = particleTexture
+// particlesMaterial.alphaTest = 0.01
+// particlesMaterial.depthTest = false
+particlesMaterial.depthWrite = true
+particlesMaterial.blending = THREE.AdditiveBlending
+particlesMaterial.vertexColors = true
+
+const particles = new THREE.Points(particlesGeometry, particlesMaterial)
+
+
+
+mesh1.position.x = 30
+mesh2.position.x = -30
+
+mesh2.position.y = -30
+particles.position.y = -90
+
+scene.add(mesh1,mesh2, particles)
+const allMeshes = [mesh1, mesh2]
 
 /**
  * Sizes
@@ -91,6 +146,16 @@ const renderer = new THREE.WebGLRenderer({
 renderer.setSize(sizes.width, sizes.height)
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 
+
+/**
+ * Scroll
+ */
+let scrollY = window.scrollY
+window.addEventListener('scroll', () =>
+{
+    scrollY = window.scrollY
+})
+
 /**
  * Animate
  */
@@ -103,12 +168,29 @@ const tick = () =>
     const deltaTime = elapsedTime - previousTime
     previousTime = elapsedTime
 
+    
+    // Animate camera
+    camera.position.y = - scrollY / sizes.height * 30
+
     // Render
     renderer.render(scene, camera)
 
-    mesh1.rotation.y += deltaTime* 0.7;
-    mesh1.rotation.x += deltaTime* 0.2;
-    mesh1.rotation.z += deltaTime* 1;
+    for(const mesh of allMeshes){
+        mesh.rotation.y += deltaTime* 0.7;
+        mesh.rotation.x += deltaTime* 0.2;
+        mesh.rotation.z += deltaTime* 1;
+    }
+
+    // Update particles
+    for(let i = 0; i < count; i++)
+    {
+        let i3 = i * 3
+
+        const x = particlesGeometry.attributes.position.array[i3]
+        particlesGeometry.attributes.position.array[i3 + 1] = Math.sin(elapsedTime+x) * 20
+    }
+    particlesGeometry.attributes.position.needsUpdate = true
+
 
     // Call tick again on the next frame
     window.requestAnimationFrame(tick)
