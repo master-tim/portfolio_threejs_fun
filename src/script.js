@@ -53,11 +53,11 @@ const material = new THREE.MeshStandardMaterial()
 material.roughness = 0.4
 
 const mesh1 = new THREE.Mesh(
-    new THREE.TorusKnotGeometry( 10, 3, 100, 16 ),
+    new THREE.TorusKnotGeometry( 1, 0.3, 100, 16 ),
     material
 )
 const mesh2 = new THREE.Mesh(
-    new THREE.BoxGeometry(10, 10, 10),
+    new THREE.BoxGeometry(1.4, 1.4, 1.4),
     material
 )
 
@@ -87,24 +87,32 @@ particlesMaterial.color = new THREE.Color('#ff88cc')
 
 particlesMaterial.transparent = true
 particlesMaterial.alphaMap = particleTexture
-// particlesMaterial.alphaTest = 0.01
-// particlesMaterial.depthTest = false
+particlesMaterial.alphaTest = 0.01
+particlesMaterial.depthTest = false
 particlesMaterial.depthWrite = true
 particlesMaterial.blending = THREE.AdditiveBlending
 particlesMaterial.vertexColors = true
 
 const particles = new THREE.Points(particlesGeometry, particlesMaterial)
 
+mesh1.position.x = 5
+mesh2.position.x = -5
 
-
-mesh1.position.x = 30
-mesh2.position.x = -30
-
-mesh2.position.y = -30
-particles.position.y = -90
+mesh2.position.y = -3
+particles.position.y = -10
 
 scene.add(mesh1,mesh2, particles)
 const allMeshes = [mesh1, mesh2]
+
+/**
+ * Raycaster
+ */
+const raycaster = new THREE.Raycaster()
+let currentIntersect = null
+const rayOrigin = new THREE.Vector3(- 8, 0, 0)
+const rayDirection = new THREE.Vector3(10, 0, 0)
+rayDirection.normalize()
+
 
 /**
  * Sizes
@@ -133,8 +141,8 @@ window.addEventListener('resize', () =>
  * Camera
  */
 // Base camera
-const camera = new THREE.PerspectiveCamera( 45, sizes.width / sizes.height, 1, 1000 );
-camera.position.z = 100
+const camera = new THREE.PerspectiveCamera( 75, sizes.width / sizes.height, 0.1, 1000 );
+camera.position.z = 8
 scene.add(camera)
 
 /**
@@ -157,6 +165,37 @@ window.addEventListener('scroll', () =>
 })
 
 /**
+ * Mouse
+ */
+const mouse = new THREE.Vector2()
+
+window.addEventListener('mousemove', (event) =>
+{
+    mouse.x = event.clientX / sizes.width * 2 - 1
+    mouse.y = - (event.clientY / sizes.height) * 2 + 1
+})
+
+window.addEventListener('click', () =>
+{
+    console.log(currentIntersect)
+
+    if(currentIntersect)
+    {
+        switch(currentIntersect.object)
+        {
+            case mesh1:
+                console.log('click on object 1')
+                break
+
+            case mesh2:
+                console.log('click on object 2')
+                break
+        }
+    }
+})
+
+
+/**
  * Animate
  */
 const clock = new THREE.Clock()
@@ -170,15 +209,45 @@ const tick = () =>
 
     
     // Animate camera
-    camera.position.y = - scrollY / sizes.height * 30
+    camera.position.y = - scrollY / sizes.height * 3
 
     // Render
     renderer.render(scene, camera)
 
     for(const mesh of allMeshes){
-        mesh.rotation.y += deltaTime* 0.7;
-        mesh.rotation.x += deltaTime* 0.2;
-        mesh.rotation.z += deltaTime* 1;
+        mesh.rotation.y += deltaTime* 0.7
+        mesh.rotation.x += deltaTime* 0.2
+        mesh.rotation.z += deltaTime* 1
+    }
+
+    // Cast a ray from the mouse and handle events
+    raycaster.setFromCamera(mouse, camera)
+    const intersects = raycaster.intersectObjects(allMeshes)
+    
+    if(intersects.length)
+    {
+        // console.log(currentIntersect.ob);
+
+
+        if(!currentIntersect)
+        {
+            console.log("mouse enter")
+        }else{
+            currentIntersect.object.rotation.x += deltaTime* 3;
+            currentIntersect.object.rotation.y += deltaTime* 2;
+            currentIntersect.object.rotation.z += deltaTime* 2;
+        }
+
+        currentIntersect = intersects[0]
+    }
+    else
+    {
+        if(currentIntersect)
+        {
+            console.log('mouse leave')
+        }
+        
+        currentIntersect = null
     }
 
     // Update particles
@@ -187,10 +256,11 @@ const tick = () =>
         let i3 = i * 3
 
         const x = particlesGeometry.attributes.position.array[i3]
-        particlesGeometry.attributes.position.array[i3 + 1] = Math.sin(elapsedTime+x) * 20
+        particlesGeometry.attributes.position.array[i3 + 1] = Math.sin(elapsedTime+x) 
     }
     particlesGeometry.attributes.position.needsUpdate = true
 
+    
 
     // Call tick again on the next frame
     window.requestAnimationFrame(tick)
